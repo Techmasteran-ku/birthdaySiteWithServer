@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ff5c8a">
+<title>Happy Birthday 🎉</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Pacifico&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-page="home">
+
+<!-- Tap-to-start gate (also guarantees the browser lets music play) -->
+<div id="gate" role="button" tabindex="0" aria-label="Tap anywhere to open your surprise">
+  <div class="gate-box">
+    <div class="gift">🎁</div>
+    <h2 class="script">You have a surprise!</h2>
+    <p>Tap anywhere to open it</p>
+    <p class="gate-note">kindly give us required permissions.</p>
+  </div>
+</div>
+
+<div class="bunting" id="bunting" aria-hidden="true"></div>
+<div id="balloon-layer" aria-hidden="true"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Navigation -->
+<nav id="nav" aria-label="Pages">
+  <a href="#home"><span>🏠</span><b>Home</b></a>
+  <a href="#balloons"><span>🎈</span><b>Balloons</b></a>
+  <a href="#cake"><span>🎂</span><b>Cake</b></a>
+  <a href="#photos"><span>📸</span><b>Photos</b></a>
+  <a href="#wishes"><span>💌</span><b>Wishes</b></a>
+  <a href="#letter"><span>💖</span><b>Letter</b></a>
+</nav>
+
+<!-- Music player -->
+<div id="player" class="player">
+  <button id="restartBtn" aria-label="Restart song" title="Restart">⏮</button>
+  <button id="playBtn" class="main" aria-label="Play or pause song" title="Play / Pause">▶</button>
+  <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <button id="muteBtn" aria-label="Mute or unmute" title="Mute">🔊</button>
+  <input id="vol" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
+</div>
+
+<main id="app">
+
+  <!-- HOME -->
+  <section class="page active" id="home">
+    <span class="deco d1">🧁</span><span class="deco d2">🎂</span><span class="deco d3">🎁</span><span class="deco d4">🍰</span>
+    <div class="hero">
+      <p class="kicker">Today is all about you</p>
+      <h1><span class="script">Happy Birthday</span><span class="name script" data-name></span></h1>
+      <p class="sub">I built this little party just for you. Pop the balloons, blow out the candles and open every wish inside.</p>
+      <a class="btn" href="#balloons">Start the party 🎈</a>
+      <p class="hint">Tip: tap any balloon that floats by 😉</p>
+    </div>
+  </section>
+
+  <!-- BALLOONS -->
+  <section class="page" id="balloons">
+    <h2 class="title script">Pop the balloons!</h2>
+    <p class="lead">Every balloon hides a tiny wish. Pop all <b id="goal">10</b> to unlock a surprise.</p>
+    <div class="counter"><span id="poppedCount">0</span> / <span id="goalCount">10</span> popped</div>
+    <div class="bar"><div id="barFill"></div></div>
+    <div class="stage">
+      <img class="cutout" src="assets/cutout.png" alt="Birthday girl holding a cake">
+      <blockquote class="shayari" lang="hi">
+        <p class="sh-line" style="--i:0">चाँदनी-सी खिलती रहे मुस्कान तेरी,</p>
+        <p class="sh-line" style="--i:1">आसमाँ छू ले हर एक उड़ान तेरी।</p>
+        <p class="sh-line" style="--i:2">रब करे हर ख़्वाब हो पूरा इस बरस,</p>
+        <p class="sh-line" style="--i:3">बनी रहे दुनिया में अलग पहचान तेरी।</p>
+        <footer class="sh-line" style="--i:4">Happy Birthday, My Dear Besti... 💖🎂</footer>
+      </blockquote>
+    </div>
+  </section>
+
+  <!-- CAKE -->
+  <section class="page" id="cake">
+    <h2 class="title script">Make a wish…</h2>
+    <p class="lead">Tap the candles to blow them out, or let me do it for you.</p>
+    <div class="cake-wrap">
+      <div class="cake">
+        <div class="candles" id="candles"></div>
+        <div class="layer top"><i class="drip"></i><i class="drip"></i><i class="drip"></i><i class="drip"></i><i class="drip"></i></div>
+        <div class="layer mid"></div>
+        <div class="layer bot"></div>
+        <div class="plate"></div>
+      </div>
+      <p id="wishText" class="wish-text">🎉 Wish granted! May every dream of yours come true 🎉</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="blowBtn">Blow the candles 💨</button>
+      <button class="btn ghost" id="relightBtn">Light again 🔥</button>
+    </div>
+    <div class="row"><a class="btn" id="cakeNext" href="#photos" hidden>Next: Photos ➜</a></div>
+  </section>
+
+  <!-- PHOTOS -->
+  <section class="page" id="photos">
+    <h2 class="title script">A Little Gallery of Lots of Cuteness</h2>
+    <p class="lead">Tap a photo to see it bigger.</p>
+    <div class="gallery" id="gallery"></div>
+    <div class="row"><a class="btn" href="#wishes">Next: Wishes ➜</a></div>
+  </section>
+
+  <!-- WISHES -->
+  <section class="page" id="wishes">
+    <h2 class="title script">Wishes Just For You, Dear Dhanashri ❤️</h2>
+    <p class="lead">Tap the photo on each envelope to open it.</p>
+    <div class="cards" id="cards"></div>
+    <div class="row"><a class="btn" href="#letter">Next: My letter ➜</a></div>
+  </section>
+
+  <!-- LETTER -->
+  <section class="page" id="letter">
+    <h2 class="title script">A letter for you</h2>
+    <article class="paper">
+      <p id="letterText" aria-live="polite"></p>
+      <p class="sign" id="letterSign"></p>
+    </article>
+    <div class="row">
+      <button class="btn" id="celebrateBtn">Celebrate! 🎊</button>
+      <button class="btn ghost" id="replayBtn">Read again ↺</button>
+      <a class="btn ghost" href="#home">Back to start 🏠</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- Balloon-game surprise -->
+<div class="modal" id="surprise" hidden>
+  <div class="modal-box">
+    <div class="big">🎉</div>
+    <h3 class="script">Surprise unlocked!</h3>
+    <p id="surpriseText"></p>
+    <button class="btn" id="surpriseClose">Yay! 💖</button>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="modal dark" id="lightbox" hidden>
+  <button class="lb-close" id="lbClose" aria-label="Close">✕</button>
+  <button class="lb-nav prev" id="lbPrev" aria-label="Previous photo">‹</button>
+  <figure>
+    <img id="lbImg" alt="">
+    <figcaption id="lbCap"></figcaption>
+  </figure>
+  <button class="lb-nav next" id="lbNext" aria-label="Next photo">›</button>
+</div>
+
+<script src="tracker.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

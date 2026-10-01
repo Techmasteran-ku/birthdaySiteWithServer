@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Visitor dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{--pink:#ff5c8a;--violet:#6a3df0;--mint:#1fc8a9;--ink:#2d1b4e;--muted:#7d7392;--bg:#f6f2fb;--card:#fff;--line:#e8e1f3}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:20px;max-width:1280px;margin:0 auto}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  h1{font-size:24px}
+  h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:2px}
+  .actions{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+  .btn{background:var(--violet);color:#fff;border:0;padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;text-decoration:none}
+  .btn.alt{background:#fff;color:var(--violet);border:1px solid var(--line)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi b{display:block;font-size:26px;color:var(--violet)}
+  .kpi span{font-size:13px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+  .card h2{font-size:15px;margin-bottom:10px}
+  .card p.note{font-size:12px;color:var(--muted);margin-top:8px}
+  .bars .row{display:grid;grid-template-columns:minmax(70px,120px) 1fr 40px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+  .bars .row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .track{background:#f0eafa;border-radius:6px;height:12px;overflow:hidden}
+  .fill{height:100%;background:linear-gradient(90deg,var(--pink),var(--violet));border-radius:6px}
+  .days{display:flex;align-items:flex-end;gap:6px;height:130px}
+  .day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--muted)}
+  .day i{display:block;width:100%;background:linear-gradient(var(--pink),var(--violet));border-radius:4px 4px 0 0;min-height:2px}
+  .day em{font-style:normal;color:var(--ink);font-weight:600;margin-bottom:2px}
+  #map{height:340px;border-radius:10px;z-index:0}
+  .legend{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  .tag{padding:2px 8px;border-radius:999px;font-size:11px;background:#eee;color:#555}
+  .tag.granted{background:#d9f7ef;color:#0b7a64}.tag.denied{background:#ffe1e9;color:#b3123f}
+  .tag.timeout,.tag.unavailable{background:#fff1d6;color:#8a5a00}
+  .empty{color:var(--muted);font-size:13px;padding:8px 0}
+  footer{font-size:12px;color:var(--muted);margin:18px 0}
+  a{color:var(--violet)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Visitor dashboard <small id="sub">loading…</small></h1>
+  <div class="actions">
+    <span id="updated"></span>
+    <button class="btn alt" id="refresh">Refresh</button>
+    <a class="btn" href="/admin/export.csv">Download CSV</a>
+  </div>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<section class="grid">
+  <div class="card"><h2>Visits per day (last 14 days)</h2><div class="days" id="days"></div></div>
+  <div class="card"><h2>Average time on each page</h2><div class="bars" id="pages"></div>
+    <p class="note">Only counts time the tab was visible.</p></div>
+  <div class="card"><h2>Location prompt results</h2><div class="bars" id="gps"></div>
+    <p class="note">granted = she allowed GPS · denied = she blocked it · none = never answered</p></div>
+</section>
+
+<section class="card" style="margin-bottom:14px">
+  <h2>Map</h2>
+  <div id="map"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:#ff5c8a"></i>GPS (allowed by visitor)</span>
+    <span><i class="dot" style="background:#6a3df0"></i>Approximate, from IP address</span>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card"><h2>Devices</h2><div class="bars" id="device"></div></div>
+  <div class="card"><h2>Browsers</h2><div class="bars" id="browser"></div></div>
+  <div class="card"><h2>Operating systems</h2><div class="bars" id="os"></div></div>
+  <div class="card"><h2>Countries</h2><div class="bars" id="country"></div></div>
+  <div class="card"><h2>Cities (from IP)</h2><div class="bars" id="city"></div></div>
+</section>
+
+<section class="card" style="margin-bottom:14px">
+  <h2>Visitors</h2>
+  <div class="scroll"><table id="visitors"></table></div>
+</section>
+
+<section class="card">
+  <h2>Latest visits</h2>
+  <div class="scroll"><table id="recent"></table></div>
+</section>
+
+<footer>Bots and link previews (WhatsApp, Telegram…) are not counted. Times shown in your local timezone.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDur = s => { s = Math.round(s || 0); if (s < 60) return s + "s"; const m = Math.floor(s / 60);
+  return m < 60 ? m + "m " + String(s % 60).padStart(2, "0") + "s" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m"; };
+const fmtTime = ms => ms ? new Date(ms).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-";
+const place = r => [r.city, r.region, r.country].filter(Boolean).join(", ") || "-";
+const device = r => [r.device_model || r.device_type, r.os].filter(Boolean).join(" · ");
+const short = id => "#" + String(id).slice(0, 6);
+const tag = s => `<span class="tag ${esc(s)}">${esc(s)}</span>`;
+
+function bars(el, rows, key = "visits", fmt = v => v) {
+  const max = Math.max(1, ...rows.map(r => r[key]));
+  $(el).innerHTML = rows.length ? rows.map(r =>
+    `<div class="row"><span title="${esc(r.name)}">${esc(r.name)}</span><div class="track"><div class="fill" style="width:${r[key] / max * 100}%"></div></div><span>${esc(fmt(r[key]))}</span></div>`
+  ).join("") : '<div class="empty">No data yet</div>';
+}
+
+let map, layer, fitted = false;
+function drawMap(d) {
+  if (!window.L) { $("#map").innerHTML = '<div class="empty">Map could not load (offline?)</div>'; return; }
+  if (!map) {
+    map = L.map("map").setView([20.6, 78.9], 4);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap contributors" }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+  }
+  layer.clearLayers();
+  const pts = [], seen = new Set();
+  for (const g of d.gps) {
+    if (seen.has(g.visitor_id)) continue; seen.add(g.visitor_id);
+    L.circleMarker([g.lat, g.lng], { radius: 9, color: "#fff", weight: 2, fillColor: "#ff5c8a", fillOpacity: .95 })
+      .bindPopup(`Visitor ${esc(short(g.visitor_id))}<br>GPS · accuracy ±${esc(g.accuracy ?? "?")} m<br>${esc(fmtTime(g.geo_at))}`).addTo(layer);
+    pts.push([g.lat, g.lng]);
+  }
+  const seenIp = new Set();
+  for (const g of d.ipPoints) {
+    if (seenIp.has(g.visitor_id)) continue; seenIp.add(g.visitor_id);
+    L.circleMarker([g.lat, g.lng], { radius: 7, color: "#fff", weight: 2, fillColor: "#6a3df0", fillOpacity: .8 })
+      .bindPopup(`Visitor ${esc(short(g.visitor_id))}<br>~ ${esc([g.city, g.country].filter(Boolean).join(", "))} (from IP)`).addTo(layer);
+    pts.push([g.lat, g.lng]);
+  }
+  if (pts.length && !fitted) { map.fitBounds(pts, { padding: [40, 40], maxZoom: 12 }); fitted = true; }
+}
+
+function render(d) {
+  const t = d.totals;
+  $("#sub").textContent = `IP mode: ${d.ipMode}${d.ipMode === "hashed" ? " (real IPs are not stored)" : ""} · ${t.bots} bot/preview hits ignored`;
+  $("#updated").textContent = "Updated " + new Date(d.generatedAt).toLocaleTimeString();
+  const avg = t.visits ? t.seconds / t.visits : 0;
+  $("#kpis").innerHTML = [
+    [t.visits, "Total visits"], [t.visitors, "Unique visitors"], [t.returning, "Came back more than once"],
+    [fmtDur(avg), "Avg time per visit"], [fmtDur(t.seconds), "Total time on site"], [t.last24h, "Visits, last 24 h"],
+    [`${t.gps_granted}/${t.gps_granted + t.gps_denied}`, "Allowed GPS / answered"]
+  ].map(([v, l]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
+
+  // 14-day chart (fill missing days with 0)
+  const map14 = Object.fromEntries(d.days.map(x => [x.day, x.visits]));
+  const out = [], now = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const dt = new Date(now.getTime() - i * 864e5);
+    const key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+    out.push({ key, label: dt.getDate(), n: map14[key] || 0 });
+  }
+  const max = Math.max(1, ...out.map(x => x.n));
+  $("#days").innerHTML = out.map(x => `<div class="day" title="${esc(x.key)}: ${x.n}"><em>${x.n || ""}</em><i style="height:${x.n / max * 82}%"></i>${x.label}</div>`).join("");
+
+  bars("#pages", d.pageTimes.map(p => ({ name: p.page, avg: p.avg })), "avg", fmtDur);
+  bars("#gps", d.breakdown.gps.map(x => ({ name: x.name, visits: x.visits })));
+  for (const k of ["device", "browser", "os", "country", "city"]) bars("#" + k, d.breakdown[k]);
+  drawMap(d);
+
+  $("#visitors").innerHTML = d.visitors.length
+    ? `<tr><th>Visitor</th><th>Visits</th><th>First seen</th><th>Last seen</th><th>Total time</th><th>IP</th><th>Place (IP)</th><th>Device</th><th>Browser</th><th>GPS</th></tr>` +
+      d.visitors.map(v => `<tr><td>${esc(short(v.visitor_id))}</td><td>${v.visits}</td><td>${esc(fmtTime(v.first_seen))}</td><td>${esc(fmtTime(v.last_seen))}</td>
+        <td>${esc(fmtDur(v.seconds))}</td><td>${esc(v.ip || "-")}</td><td>${esc(place(v))}</td><td>${esc(device(v))}</td><td>${esc(v.browser || "-")}</td>
+        <td>${tag(v.geo_status)}${v.lat != null ? ` <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${v.lat}&mlon=${v.lng}#map=16/${v.lat}/${v.lng}">${esc(v.lat.toFixed(4))}, ${esc(v.lng.toFixed(4))}</a>` : ""}</td></tr>`).join("")
+    : '<tr><td class="empty">No visitors yet - open your website once to test.</td></tr>';
+
+  $("#recent").innerHTML = d.recent.length
+    ? `<tr><th>When</th><th>Visitor</th><th>Time on site</th><th>IP</th><th>Place (IP)</th><th>Device</th><th>Browser</th><th>Came from</th><th>GPS</th></tr>` +
+      d.recent.map(v => `<tr><td>${esc(fmtTime(v.started_at))}</td><td>${esc(short(v.visitor_id))}</td><td>${esc(fmtDur(v.duration_sec))}</td>
+        <td>${esc(v.ip || "-")}</td><td>${esc(place(v))}</td><td>${esc(device(v))}</td><td>${esc(v.browser || "-")}</td>
+        <td>${esc(v.referrer ? v.referrer.replace(/^https?:\/\//, "").slice(0, 40) : "direct")}</td><td>${tag(v.geo_status)}</td></tr>`).join("")
+    : '<tr><td class="empty">Nothing yet.</td></tr>';
+}
+
+async function load() {
+  try {
+    const r = await fetch("/admin/api/stats?tz=" + new Date().getTimezoneOffset(), { cache: "no-store", credentials: "same-origin" });
+    if (!r.ok) throw new Error(r.status);
+    render(await r.json());
+  } catch (e) { $("#sub").textContent = "Could not load data (" + e.message + ")"; }
+}
+$("#refresh").addEventListener("click", load);
+load();
+setInterval(() => { if (!document.hidden) load(); }, 15000);
+</script>
+</body>
+</html>
